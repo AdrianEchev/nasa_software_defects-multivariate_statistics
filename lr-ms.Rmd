@@ -1,0 +1,99 @@
+---
+title: "Logistic Regression with Multivariate Statistics"
+author: "Adrián Echeverría P."
+output:
+  rmdformats::material:
+  html_document:
+    keep_md: true
+    suppress_warnings: true
+    suppress_messages: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries:
+```{r, warning=FALSE, message=FALSE}
+library(ggplot2)
+library(corrplot)
+library(MASS)
+library(GGally)
+library(CCA)
+```
+
+## Loading dataset:
+```{r}
+df <- read.csv('C:\\Users\\Usuario\\Desktop\\jm1.csv')
+```
+
+## Setting variables to numeric:
+
+#### The defects column, which is the one we want to predict, is in String values. Therefore, we must switch it to binary (1 or 0).
+```{r, warning=FALSE, message=FALSE}
+df$defects[df$defects == 'true'] <- 1
+df$defects[df$defects == 'false'] <- 0
+df$uniq_Op = as.numeric(as.character(df$uniq_Op))
+df$uniq_Opnd = as.numeric(as.character(df$uniq_Opnd))
+df$total_Op = as.numeric(as.character(df$total_Op))
+df$total_Opnd = as.numeric(as.character(df$total_Opnd))
+df$branchCount = as.numeric(as.character(df$branchCount))
+df$defects = as.numeric(as.character(df$defects))
+```
+
+### Verifying the contents of the dataset:
+```{r}
+head(df)
+```
+
+## Statistical behavior of each column.
+```{r}
+summary(df)
+```
+
+## Correlation plot:
+```{r}
+df2 <- df[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,22)]
+correlations <- cor(df2)
+corrplot(correlations, method="circle")
+```
+
+## Boxplots with subplots:
+
+#### We analyze if there are any outliers and how many. Moreover, we observe the distribution between variables.
+```{r}
+par(mfrow=c(2,4))
+for(i in 1:21) {
+    boxplot(df[,i], main=names(df)[i])
+}
+```
+
+## Fitting the model and printing the normality.
+
+#### The more asterisks included in each result, the better. These are features that are interesting for the model.
+```{r}
+glm.fit <- glm(defects ~ loc+v.g.+ev.g.+iv.g.+n+v+l+d+i+e+b+t+lOCode+lOComment+lOBlank+locCodeAndComment+uniq_Op+uniq_Opnd+total_Op+branchCount+defects, data = df, family = binomial)
+summary(glm.fit)
+```
+
+```{r}
+df3 <- df[,c(1,7,13,17,21,22)]
+pairs(df3, col=df3$defects)
+```
+
+## Confusion Matrix:
+```{r}
+glm.probs <- predict(glm.fit, type = "response")
+glm.pred <- ifelse(glm.probs > 0.5, 1, 0)
+
+defects <- df$defects
+defects <- defects[1:(length(defects) - 5)]
+defects_factor <- factor(defects, levels = c(0, 1))
+
+table(glm.pred, defects_factor)
+```
+
+## Accuracy of the model:
+```{r}
+mean(glm.pred == defects_factor)
+```
